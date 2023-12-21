@@ -10,30 +10,30 @@
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
 // drive motors
-pros::Motor lF();
-pros::Motor lBb();
-pros::Motor lBt();
-pros::Motor rF(); 
-pros::Motor rMb();
-pros::Motor rBt(); 
+pros::Motor lF(8);
+pros::Motor lBb(9);
+pros::Motor lBt(10, true); 
+pros::Motor rF(3); 
+pros::Motor rBb(4);
+pros::Motor rBt(5, true); 
+/*
+* motors 10 and 5 are stacked on top of another motor, so they must be reversed
+* if these motors are not reversed, then the stacked motors will oppose the motors they sit on top of
+*/
+
+
+pros::MotorGroup left({lF, lBb, lBt});
+pros::MotorGroup right({rF, rBb, rBt});
 
 
 
-
-
-pros::MotorGroup left({lF, lM, lB});
-pros::MotorGroup right({rF, lM, rB});
-
-
-
-lemlib::Drivetrain_t drivetrain(
+lemlib::Drivetrain_t drivetrain{
 	&left, //leftside motorgroup
 	&right, //right side motorgroup
-	13.25, //wheel track
-  4, //wheel diameters
+	12.75, //wheel track
+    4, //wheel diameters
 	257, //drivetrain rpm
-	2 //chase power
-);
+};
 
 
 // forward/backward PID
@@ -55,18 +55,18 @@ lemlib::ChassisController_t angularController {
     100, // smallErrorTimeout
     3, // largeErrorRange
     500, // largeErrorTimeout
-    40 // slew rate
+    40, // slew rate
 };
 
-lemlib::OdomSensors_t sensors(
+lemlib::OdomSensors_t sensors{
 	nullptr,
 	nullptr,
 	nullptr,
 	nullptr,
 	nullptr //IMU
-);
+};
 
-lemlib::Chassis chassis(drivetrain, linear, angular, sensors);
+lemlib::Chassis chassis(drivetrain, lateralController, angularController, sensors);
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -109,7 +109,18 @@ void competition_initialize() {}
  */
 void autonomous() {	
 	
-   chassis.moveTo(0,-90,1000,50);
+/*
+* simple autonomous code that moves the bot forward
+* first argument in .move_relative represents distance (i think)
+* second argument in .move_relative represents maximum speed
+* eventually we will use .move_velocity to spin non-dt motors, like intake
+* these non-dt motors can also be moved using .move_voltage, not sure which command is better
+* .move_velocity looks like this: <motor>.move_velocity(rpm);
+* use a negative value for the rpm to spin the motor the other way
+*/
+    right.move_relative(5000, 100);
+    left.move_relative(-5000, 100);
+
 }
 /**
  * Runs the operator control code. This function will be started in its own task
@@ -124,13 +135,48 @@ void autonomous() {
  * operator control task will be stopped. Re-enabling the robot will restart the
  * task, not resume it from where it left off.
  */
-void opcontrol() {
-	while (true) {
-		int forward = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
-		int yaw = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
 
-  chassis.arcade(yaw, forward);
+void opcontrol() {
 	
-  pros::delay(20);
+	while (true)	{
+        double left;
+		double right;
+
+        double yaw = controller.get_analog(E_CONTROLLER_ANALOG_LEFT_Y);
+        double forward = -controller.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
+
+        double maxInput = std::copysign(std::max(std::abs(forward), std::abs(yaw)), forward);
+
+        if (forward >= 0)
+        {
+             if (yaw >= 0)
+            {
+                left = maxInput;
+                right = forward - yaw;
+            }
+            else
+            {
+                left = forward + yaw;
+                right = maxInput;
+            }
+        }
+        else
+        {
+            if (yaw >= 0)
+            {
+                left = forward + yaw;
+                right = maxInput;
+            }
+            else
+            {
+                left = maxInput;
+                right = forward - yaw;
+            }
+        }
+
+        drivetrain.leftMotors->move(left);
+        drivetrain.rightMotors->move(right);
+
+        pros::delay(20);
+    }
 	}
-}
