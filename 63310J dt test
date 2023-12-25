@@ -21,6 +21,9 @@ pros::Motor rBt(5, true);
 * if these motors are not reversed, then the stacked motors will oppose the motors they sit on top of
 */
 
+//other motors
+pros::Motor cata();
+pros::Motor intake();
 
 pros::MotorGroup left({lF, lBb, lBt});
 pros::MotorGroup right({rF, rBb, rBt});
@@ -179,4 +182,25 @@ void opcontrol() {
 
         pros::delay(20);
     }
+
+	//intake
+	if(controller.get_digital(E_CONTROLLER_DIGITAL_R1)){ 
+				intake.move_voltage(12000);	
+	} 
+	else if(controller.get_digital(E_CONTROLLER_DIGITAL_R2)){ 
+			intake.move_voltage(-12000);
+	} else {
+		intake.brake();
+		}
+
+	//cata
+	if(controller.get_digital(E_CONTROLLER_DIGITAL_L1)){  //ion know which way this motor should go so just try both buttons and see which one works
+			cata.move_voltage(12000);	
+	} 
+	else if(controller.get_digital(E_CONTROLLER_DIGITAL_L2)){ 
+			cata.move_voltage(-12000);
+	} else {
+		cata.brake();
+		}
+
 	}
