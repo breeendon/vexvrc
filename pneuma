@@ -1,0 +1,211 @@
+#include "main.h"
+#include "lemlib/api.hpp"
+
+
+
+
+	
+
+// controller
+pros::Controller controller(pros::E_CONTROLLER_MASTER);
+
+// drive motors
+pros::Motor lF(8);
+pros::Motor lBb(9);
+pros::Motor lBt(10, true); 
+pros::Motor rF(3); 
+pros::Motor rBb(4);
+pros::Motor rBt(5, true); 
+/*
+* motors 10 and 5 are stacked on top of another motor, so they must be reversed
+* if these motors are not reversed, then the stacked motors will oppose the motors they sit on top of
+*/
+
+pros::Motor cata(11);
+pros::Motor intake (12);
+
+pros::MotorGroup left({lF, lBb, lBt});
+pros::MotorGroup right({rF, rBb, rBt});
+
+pros::ADIDigitalOut mmmm('A');
+
+
+
+
+
+lemlib::Drivetrain_t drivetrain{
+	&left, //leftside motorgroup
+	&right, //right side motorgroup
+	12.75, //wheel track
+    4, //wheel diameters
+	257, //drivetrain rpm
+};
+
+
+// forward/backward PID
+lemlib::ChassisController_t lateralController {
+    8, // kP
+    30, // kD
+    1, // smallErrorRange
+    100, // smallErrorTimeout
+    3, // largeErrorRange
+    500, // largeErrorTimeout
+    5 // slew rate
+};
+
+// turning PID
+lemlib::ChassisController_t angularController {
+    4, // kP
+    40, // kD
+    1, // smallErrorRange
+    100, // smallErrorTimeout
+    3, // largeErrorRange
+    500, // largeErrorTimeout
+    40, // slew rate
+};
+
+lemlib::OdomSensors_t sensors{
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr //IMU
+};
+
+lemlib::Chassis chassis(drivetrain, lateralController, angularController, sensors);
+
+/**
+ * Runs initialization code. This occurs as soon as the program is started.
+ *
+ * All other competition modes are blocked by initialize; it is recommended
+ * to keep execution time for this mode under a few seconds.
+ */
+void initialize() {
+
+}
+
+/**
+ * Runs while the robot is in the disabled state of Field Management System or
+ * the VEX Competition Switch, following either autonomous or opcontrol. When
+ * the robot is enabled, this task will exit.
+ */
+void disabled() {}
+
+/**
+ * Runs after initialize(), and before autonomous when connected to the Field
+ * Management System or the VEX Competition Switch. This is intended for
+ * competition-specific initialization routines, such as an autonomous selector
+ * on the LCD.
+ *
+ * This task will exit when the robot is enabled and autonomous or opcontrol
+ * starts.
+ */
+void competition_initialize() {}
+
+/*
+ * Runs the user autonomous code. This function will be started in its own task
+ * with the default priority and stack size whenever the robot is enabled via
+ * the Field Management System or the VEX Competition Switch in the autonomous
+ * mode. Alternatively, this function may be called in initialize or opcontrol
+ * for non-competition testing purposes.
+ *
+ * If the robot is disabled or communications is lost, the autonomous task
+ * will be stopped. Re-enabling the robot will restart the task, not re-start it
+ * from where it left off.
+ */
+void autonomous() {	
+	
+/*
+* simple autonomous code that moves the bot forward
+* first argument in .move_relative represents distance (i think)
+* second argument in .move_relative represents maximum speed
+* eventually we will use .move_velocity to spin non-dt motors, like intake
+* these non-dt motors can also be moved using .move_voltage, not sure which command is better
+* .move_velocity looks like this: <motor>.move_velocity(rpm);
+* use a negative value for the rpm to spin the motor the other way
+*/
+    right.move_relative(5000, 100);
+    left.move_relative(-5000, 100);
+    
+ 
+
+}
+/**
+ * Runs the operator control code. This function will be started in its own task
+ * with the default priority and stack size whenever the robot is enabled via
+ * the Field Management System or the VEX Competition Switch in the operator
+ * control mode.
+ *
+ * If no competition control is connected, this function will run immediately
+ * following initialize().
+ *
+ * If the robot is disabled or communications is lost, the
+ * operator control task will be stopped. Re-enabling the robot will restart the
+ * task, not resume it from where it left off.
+ */
+
+void opcontrol() {
+	
+	while (true)	{
+        double left;
+		double right;
+
+        double yaw = controller.get_analog(E_CONTROLLER_ANALOG_LEFT_Y);
+        double forward = -controller.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
+
+        double maxInput = std::copysign(std::max(std::abs(forward), std::abs(yaw)), forward);
+
+        if (forward >= 0)
+        {
+             if (yaw >= 0)
+            {
+                left = maxInput;
+                right = forward - yaw;
+            }
+            else
+            {
+                left = forward + yaw;
+                right = maxInput;
+            }
+        }
+        else
+        {
+            if (yaw >= 0)
+            {
+                left = forward + yaw;
+                right = maxInput;
+            }
+            else
+            {
+                left = maxInput;
+                right = forward - yaw;
+            }
+        }
+
+        drivetrain.leftMotors->move(left);
+        drivetrain.rightMotors->move(right);
+
+if(controller.get_digital(E_CONTROLLER_DIGITAL_R1)){ 
+				cata.move_voltage(12000);	
+		} else {
+			cata.brake();
+		}
+
+if(controller.get_digital(E_CONTROLLER_DIGITAL_L1)){ 
+				intake.move_voltage(12000);	
+		} else if (controller.get_digital(E_CONTROLLER_DIGITAL_L2)) {
+			intake.move_voltage(-12000);
+		}
+			intake.brake();
+		}
+
+if(controller.get_digital(E_CONTROLLER_DIGITAL_A)){
+    mmmm.set_value(true);
+} 
+
+if(controller.get_digital(E_CONTROLLER_DIGITAL_B)){
+    mmmm.set_value(false);
+}
+
+        pros::delay(20);
+    }
