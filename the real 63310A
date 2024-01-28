@@ -5,10 +5,10 @@
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
 // drive motors
-pros::Motor lF(-13, pros::E_MOTOR_GEARSET_06); // left front motor. port 12, reversed
+pros::Motor lF(13, pros::E_MOTOR_GEARSET_06); // left front motor. port 12, reversed
 pros::Motor lM(11, pros::E_MOTOR_GEARSET_06); // left middle motor. port 11, reversed
 pros::Motor lB(19, pros::E_MOTOR_GEARSET_06); // left back motor. port 1, reversed
-pros::Motor rF(-7, pros::E_MOTOR_GEARSET_06); // right front motor. port 2
+pros::Motor rF(7, pros::E_MOTOR_GEARSET_06); // right front motor. port 2
 pros::Motor rM(1, pros::E_MOTOR_GEARSET_06); // right middle motor. port 11
 pros::Motor rB(9, pros::E_MOTOR_GEARSET_06); // right back motor. port 13
 
@@ -18,9 +18,7 @@ pros::MotorGroup rightMotors({rF, rM, rB}); // right motor group
 
 //other motors
 pros::Motor slap1(4);
-pros::Motor slap2(10);
-
-pros::MotorGroup slapper({slap1, slap2});
+pros::Motor slap2(-10);
 
 //pneumatics
 pros::ADIDigitalOut thing1 ('G');
@@ -157,28 +155,24 @@ void opcontrol() {
         pros::delay(10);
 //cata
         if(controller.get_digital(pros::E_CONTROLLER_DIGITAL_L1)){  //ion know which way this motor should go so just try both buttons and see which one works
-			slapper.move_voltage(12000);	
-	} 
-	else if(controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2)){ 
-			slapper.move_voltage(-12000);
+			slap1.move_voltage(12000);
+            slap2.move_voltage(12000);	
 	} else {
-		slapper.brake();
+		slap1.brake();
+        slap2.brake();
 		}
 
 
 //1st pneumatic thing
-if(controller.get_digital(pros::E_CONTROLLER_DIGITAL_A)) {
+if(controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
     thing1.set_value(true);
-} else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_B)) {
-    thing1.set_value(false);
-}
-
-//2nd pneumatic thing
-if(controller.get_digital(pros::E_CONTROLLER_DIGITAL_A)) {
     thing2.set_value(true);
-} else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_B)) {
+} else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+    thing1.set_value(false);
     thing2.set_value(false);
 }
+
+
 	
     }
 }
